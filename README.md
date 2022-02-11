@@ -1,4 +1,22 @@
 # NSPanel-MF
+
+
+Anas - Percubaan menggunakan dan edit Sonoff NSPanel. Kredit kepada pemilik asal coding [marcfarger](https://github.com/marcfager/nspanel-mf)
+
+
+
+Sebagai permulaan - memaparkan Waktu Solat di Home Assistant. Rujuk [HA-NR-WaktuSolat-Jakim](https://github.com/anas-ivs/HA-NR-WaktuSolatJakim) untuk integration Waktu Solat JAKIM melalui Node Red ke Home Assistant 
+
+
+
+
+
+TOriginal text below preserved and to be updated ***
+
+
+
+
+
 Current version: 2022-01-19. _Changelog further down_
 
 Custom HMI controlled by ESPHome for the Sonoff NSPanel. Includes home screen with weather data and clock, media player card, control of 8 lights per card with 4 available cards (can be enabled/disabled from ESPHome/HA), bootup screen and disable screen for alarm. Audible notifications can be sent from Home Assistant that remain visible on the screen for a set period of time. The screen dims down and turns off similarly to a iPhone (dim down + screensaver) and is woken up by tapping the display. More to come.

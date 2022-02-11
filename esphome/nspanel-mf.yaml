@@ -1,5 +1,6 @@
 # NSPanel YAML by marcfager. Please check github for credits: https://github.com/marcfager/nspanel-mf
 # Version 2022-01-19
+# anas-ivs forked from marcfager.
 
 substitutions:
   # Name the device and it's entities
@@ -15,9 +16,19 @@ esp32:
 
 # Wifi settings. Add these to your secrets.yaml. fast_connect must be true for a hidden ssid.
 wifi:
-  ssid: !secret ssid
-  password: !secret wifi_pwd
-  fast_connect: !secret wifi_fast_connect
+  ssid: !secret wifi
+  password:  !secret wifi_pass
+  #fast_connect: !secret wifi_fast_connect
+  manual_ip:
+    static_ip: 192.168.0.120
+    gateway: 192.168.0.1
+    subnet: 255.255.255.0
+  
+web_server:
+  port: 80
+
+
+captive_portal:
 
 # API. Add api_pwd to your secrets.yaml.
 api:
@@ -81,24 +92,29 @@ api:
       then:
         - lambda: |-
             id(disp1).send_command_printf("page 0");
-
-
 # Time component that fetches time from Home Assistant and updates the display once a minute and when the display is ready at bootup (and time is available).
+# Wrong time zone - see open item https://github.com/esphome/issues/issues/2868. Temporary use SNTP time
+#time:
+#  - platform: homeassistant
+#    id: homeassistant_time
+
 time:
   - platform: homeassistant
     id: homeassistant_time
+    timezone: Asia/Baku
+    #timezone: Asia/Kuching
     on_time:
       - seconds: 0
         minutes: /1
         then:
           - lambda: id(disp1).set_component_text_printf("Home.time", "%02i:%02i", id(homeassistant_time).now().hour, id(homeassistant_time).now().minute);
-          - lambda: id(disp1).set_component_text_printf("Home.date", "%i-%02i-%02i", id(homeassistant_time).now().year, id(homeassistant_time).now().month, id(homeassistant_time).now().day_of_month);
+          - lambda: id(disp1).set_component_text_printf("Home.date", "%i-%02i-%02i",  id(homeassistant_time).now().day_of_month,id(homeassistant_time).now().month , id(homeassistant_time).now().year);
     on_time_sync:
         then:
           - wait_until:
               switch.is_on: nextion_init
           - lambda: id(disp1).set_component_text_printf("Home.time", "%02i:%02i", id(homeassistant_time).now().hour, id(homeassistant_time).now().minute);
-          - lambda: id(disp1).set_component_text_printf("Home.date", "%i-%02i-%02i", id(homeassistant_time).now().year, id(homeassistant_time).now().month, id(homeassistant_time).now().day_of_month);
+          - lambda: id(disp1).set_component_text_printf("Home.date", "%i-%02i-%02i",  id(homeassistant_time).now().day_of_month,id(homeassistant_time).now().month , id(homeassistant_time).now().year);
           
 
 # Logger. Disable the temperature sensor etc. to focus on the HMI development
@@ -113,7 +129,7 @@ logger:
 
 # OTA (Over the air updates) password. Add to your secrets.yaml
 ota:
-  password: !secret ota_pwd
+  password: !secret ota_pass
 
 # Uart for the Nextion display
 uart:
@@ -430,7 +446,6 @@ sensor:
                   (minutes ? to_string(minutes) + "m " : "") +
                   (to_string(seconds) + "s")
                 ).c_str();
-
   # WiFi signals strength sensor
   - platform: wifi_signal
     name: $device_name WiFi Signal Sensor
@@ -446,8 +461,8 @@ sensor:
   # Temperature outside, fetched from HA
   - platform: homeassistant
     id: current_temperature
-    entity_id: weather.home
-    attribute: temperature
+    entity_id: sensor.tempoutdoor
+    #attribute: temperature
     on_value:
       then:
         - wait_until:
@@ -457,7 +472,7 @@ sensor:
   # Temperature outside feels like, fetched from HA
   - platform: homeassistant
     id: temp_feelslike
-    entity_id: sensor.home_temperature_feels_like
+    entity_id: sensor.feelslike
     on_value:
       then:
         - wait_until:
@@ -489,7 +504,7 @@ text_sensor:
   # Media player entity (or any text entity) to pull currently playing song name from
   - platform: homeassistant
     id: music_artist
-    entity_id: media_player.sonos_vardagsrum
+    entity_id: media_player.living_room_speaker
     attribute: media_artist
     on_value:
       then:
@@ -498,7 +513,7 @@ text_sensor:
   # Media player entity (or any text entity) to pull currently playing artist name from
   - platform: homeassistant
     id: music_title
-    entity_id: media_player.sonos_vardagsrum
+    entity_id: media_player.living_room_speaker
     attribute: media_title
     on_value:
       then:
@@ -512,7 +527,7 @@ text_sensor:
   # Weather symbol, HA weather entity to pull data from
   - platform: homeassistant
     id: weather_symbol
-    entity_id: weather.home
+    entity_id: weather.rumah
     on_value:
       then:
         - wait_until:
@@ -557,11 +572,10 @@ text_sensor:
               symbol=19;              
             }
             id(disp1).send_command_printf("Home.weather_symbol.pic=%i", symbol);
-
   # Light setup, first light. If you want to leave a light out, just comment out the section for the light and name.
   - platform: homeassistant
     id: secto
-    entity_id: light.secto
+    entity_id: light.ws_light_1
     on_value:
       then:
         - wait_until:
@@ -572,11 +586,10 @@ text_sensor:
               symbol=22;
             }
             id(disp1).send_command_printf("Lights.light0.pic=%i", symbol);
-
   # Light setup, first light's name
   - platform: homeassistant
     id: secto_name
-    entity_id: light.secto
+    entity_id: light.ws_light_1
     attribute: friendly_name
     on_value:
       then:
@@ -587,7 +600,7 @@ text_sensor:
   # Light setup, second light. If you want to leave a light out, just comment out the section for the light and name.
   - platform: homeassistant
     id: sarfatti
-    entity_id: light.sarfatti
+    entity_id: light.ws_light_2
     on_value:
       then:
         - wait_until:
@@ -598,11 +611,10 @@ text_sensor:
               symbol=24;
             }
             id(disp1).send_command_printf("Lights.light1.pic=%i", symbol);
-
   # Light setup, second light's name
   - platform: homeassistant
     id: sarfatti_name
-    entity_id: light.sarfatti
+    entity_id: light.ws_light_2
     attribute: friendly_name
     on_value:
       then:
@@ -613,7 +625,7 @@ text_sensor:
   # Light setup, third light. If you want to leave a light out, just comment out the section for the light and name.
   - platform: homeassistant
     id: kok_lillabanken
-    entity_id: light.kok_lillabanken
+    entity_id: fan.walid_study_fan
     on_value:
       then:
         - wait_until:
@@ -624,11 +636,10 @@ text_sensor:
               symbol=28;
             }
             id(disp1).send_command_printf("Lights.light2.pic=%i", symbol);
-
   # Light setup, third light's name
   - platform: homeassistant
     id: kok_lillabanken_name
-    entity_id: light.kok_lillabanken
+    entity_id: fan.walid_study_fan
     attribute: friendly_name
     on_value:
       then:
@@ -639,7 +650,7 @@ text_sensor:
   # Light setup, fourth light. If you want to leave a light out, just comment out the section for the light and name.
   - platform: homeassistant
     id: tamburslampan
-    entity_id: switch.tamburslampan
+    entity_id: switch.zbsw_ws_monitors
     on_value:
       then:
         - wait_until:
@@ -650,11 +661,10 @@ text_sensor:
               symbol=26;
             }
             id(disp1).send_command_printf("Lights.light3.pic=%i", symbol);
-
   # Light setup, fourth light's name
   - platform: homeassistant
     id: tamburslampan_name
-    entity_id: switch.tamburslampan
+    entity_id: switch.zbsw_ws_monitors
     attribute: friendly_name
     on_value:
       then:
@@ -676,7 +686,6 @@ text_sensor:
               symbol=32;
             }
             id(disp1).send_command_printf("Lights.light4.pic=%i", symbol);
-
   # Light setup, fifth light's name
   - platform: homeassistant
     id: tvpentik_name
@@ -702,7 +711,6 @@ text_sensor:
               symbol=32;
             }
             id(disp1).send_command_printf("Lights.light5.pic=%i", symbol);
-
   # Light setup, sixths light's name
   - platform: homeassistant
     id: kontorsfonster_name
@@ -728,7 +736,6 @@ text_sensor:
               symbol=32;
             }
             id(disp1).send_command_printf("Lights.light6.pic=%i", symbol);
-
   # Light setup, seventh light's name
   - platform: homeassistant
     id: kontorspentik_name
@@ -754,7 +761,6 @@ text_sensor:
               symbol=30;
             }
             id(disp1).send_command_printf("Lights.light7.pic=%i", symbol);
-
   # Light setup, eighths light's name
   - platform: homeassistant
     id: oscarsdb_name
@@ -767,9 +773,16 @@ text_sensor:
         - lambda: id(disp1).set_component_text_printf("Lights.light7t", "%s", id(oscarsdb_name).state.c_str());
        
   # Home page, text line 1 (lower right part of screen)
+  
+  #text_sensor:
+  #- platform: homeassistant
+  #  id: effect
+  #  entity_id: light.led_strip
+  #  attribute: effect
   - platform: homeassistant
     id: home_text1
-    entity_id: sensor.nspanel_v90_range
+    entity_id: sensor.solat_bakiwaktu
+    attribute: waktu_solat_sekarang
     on_value:
       then:
         - wait_until:
@@ -779,13 +792,43 @@ text_sensor:
   # Home page, text line 2 (lower right part of screen)
   - platform: homeassistant
     id: home_text2
-    entity_id: sensor.nspanel_id4_range
+    entity_id: sensor.solat_bakiwaktu
+    attribute: waktu_solat_berikut
     on_value:
       then:
         - wait_until:
             switch.is_on: nextion_init
         - lambda: id(disp1).set_component_text_printf("Home.text2", "%s", id(home_text2).state.c_str());
 
+  - platform: homeassistant
+    id: home_text3
+    entity_id: sensor.solat_bakiwaktu
+    #attribute: waktu_solat_berikut
+    on_value:
+      then:
+        - wait_until:
+            switch.is_on: nextion_init
+        - lambda: id(disp1).set_component_text_printf("Home.text3", "%s", id(home_text3).state.c_str());
+
+  - platform: homeassistant
+    id: home_hijri
+    entity_id: sensor.waktu_solat
+    #attribute: waktu_solat_berikut
+    on_value:
+      then:
+        - wait_until:
+            switch.is_on: nextion_init
+        - lambda: id(disp1).set_component_text_printf("Home.hijri", "%s", id(home_hijri).state.c_str());
+
+  - platform: homeassistant
+    id: home_solatscroll
+    entity_id: sensor.waktu_solat
+    attribute: solat_scroll
+    on_value:
+      then:
+        - wait_until:
+            switch.is_on: nextion_init
+        - lambda: id(disp1).set_component_text_printf("Home.solatscroll", "%s", id(home_solatscroll).state.c_str());
 
 number:
   # Screen brightness
